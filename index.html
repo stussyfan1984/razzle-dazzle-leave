@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Razzle Dazzle - 特休查詢</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #2C3E50, #34495E);
+      color: #fff;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .header h1 { font-size: 1.4rem; font-weight: 600; }
+    .header p { font-size: 0.85rem; opacity: 0.8; margin-top: 0.3rem; }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    /* Login */
+    .login-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    .login-card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 1.2rem;
+      color: #2C3E50;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+      color: #555;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 0.7rem 0.8rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: #2C3E50;
+    }
+    .btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: #2C3E50;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #34495E; }
+    .btn:disabled {
+      background: #95a5a6;
+      cursor: not-allowed;
+    }
+    .btn-success {
+      background: #27ae60;
+    }
+    .btn-success:hover { background: #219a52; }
+    .btn-danger {
+      background: #e74c3c;
+      padding: 0.4rem 0.8rem;
+      width: auto;
+      font-size: 0.8rem;
+      border-radius: 6px;
+    }
+    .btn-danger:hover { background: #c0392b; }
+    .error-msg {
+      color: #e74c3c;
+      font-size: 0.85rem;
+      margin-top: 0.8rem;
+      text-align: center;
+    }
+    .success-msg {
+      color: #27ae60;
+      font-size: 0.85rem;
+      margin-top: 0.8rem;
+      text-align: center;
+    }
+
+    /* Dashboard */
+    .dashboard { display: none; }
+    .dashboard.active { display: block; }
+    .login-section.hidden { display: none; }
+
+    .welcome {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2rem;
+    }
+    .welcome h2 {
+      font-size: 1.1rem;
+      color: #2C3E50;
+    }
+    .logout-btn {
+      background: none;
+      border: 1px solid #bdc3c7;
+      color: #7f8c8d;
+      padding: 0.3rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .logout-btn:hover {
+      border-color: #e74c3c;
+      color: #e74c3c;
+    }
+
+    /* Cards */
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.8rem;
+      margin-bottom: 1.2rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    }
+    .card .label {
+      font-size: 0.75rem;
+      color: #95a5a6;
+      margin-bottom: 0.3rem;
+    }
+    .card .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .card .sub {
+      font-size: 0.7rem;
+      color: #95a5a6;
+      margin-top: 0.2rem;
+    }
+    .card.primary .value { color: #2C3E50; }
+    .card.success .value { color: #27ae60; }
+    .card.info .value { color: #2980b9; }
+
+    /* Detail section */
+    .section {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.2rem;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      margin-bottom: 1rem;
+    }
+    .section h3 {
+      font-size: 0.95rem;
+      color: #2C3E50;
+      margin-bottom: 0.8rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #ecf0f1;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      font-size: 0.85rem;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-row .stat-label { color: #7f8c8d; }
+    .stat-row .stat-value { font-weight: 600; }
+
+    /* Table */
+    .leave-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .leave-table th {
+      background: #f8f9fa;
+      padding: 0.5rem;
+      text-align: left;
+      font-weight: 500;
+      color: #555;
+      border-bottom: 2px solid #ecf0f1;
+    }
+    .leave-table td {
+      padding: 0.5rem;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .leave-table tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .badge-annual { background: #ebf5fb; color: #2980b9; }
+    .badge-carryover { background: #fef9e7; color: #f39c12; }
+    .badge-comp-earn { background: #eafaf1; color: #27ae60; }
+    .badge-comp-use { background: #fdedec; color: #e74c3c; }
+    .badge-personal { background: #f5f5f5; color: #7f8c8d; }
+    .badge-sick { background: #fdf2e9; color: #e67e22; }
+    .badge-cancel { background: #fce4ec; color: #c62828; }
+
+    .empty-msg {
+      text-align: center;
+      color: #bdc3c7;
+      padding: 1.5rem;
+      font-size: 0.85rem;
+    }
+
+    /* Leave form */
+    .leave-form {
+      display: none;
+    }
+    .leave-form.active {
+      display: block;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+    }
+
+    .toggle-btn {
+      display: inline-block;
+      background: #27ae60;
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .toggle-btn:hover { background: #219a52; }
+
+    @media (max-width: 480px) {
+      .cards { grid-template-columns: 1fr 1fr; }
+      .container { padding: 1rem; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Razzle Dazzle</h1>
+    <p>員工特休查詢系統</p>
+  </div>
+
+  <div class="container">
+    <!-- Login -->
+    <div class="login-section" id="loginSection">
+      <div class="login-card">
+        <h2>登入查詢</h2>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="empId">員工編號</label>
+            <input type="text" id="empId" placeholder="例: 2" inputmode="numeric" autocomplete="off" required>
+          </div>
+          <div class="form-group">
+            <label for="birthday">身分證字號</label>
+            <input type="text" id="birthday" placeholder="例: A123456789" maxlength="10" autocomplete="off" required>
+          </div>
+          <button type="submit" class="btn" id="loginBtn">查詢特休</button>
+          <div class="error-msg" id="errorMsg"></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard">
+      <div class="welcome">
+        <h2 id="welcomeName"></h2>
+        <button class="logout-btn" id="logoutBtn">登出</button>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="cards">
+        <div class="card primary">
+          <div class="label">特休應有</div>
+          <div class="value" id="totalDays">-</div>
+          <div class="sub">天</div>
+        </div>
+        <div class="card success">
+          <div class="label">特休剩餘</div>
+          <div class="value" id="remainDays">-</div>
+          <div class="sub">天</div>
+        </div>
+        <div class="card info">
+          <div class="label">補休剩餘</div>
+          <div class="value" id="compDays">-</div>
+          <div class="sub">天</div>
+        </div>
+      </div>
+
+      <!-- Leave request button -->
+      <button class="toggle-btn" id="toggleLeaveForm">+ 申請假單</button>
+
+      <!-- Leave request form -->
+      <div class="section leave-form" id="leaveForm">
+        <h3>申請假單</h3>
+        <form id="submitLeaveForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label>日期</label>
+              <input type="date" id="leaveDate" required>
+            </div>
+            <div class="form-group">
+              <label>天數</label>
+              <input type="number" id="leaveDays" value="1" min="0.5" max="30" step="0.5" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>假別</label>
+            <select id="leaveType" required>
+              <option value="">請選擇</option>
+              <option value="特休">特休</option>
+              <option value="結轉特休">結轉特休</option>
+              <option value="補休(使用)">補休(使用)</option>
+              <option value="事假">事假</option>
+              <option value="病假">病假</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>備註</label>
+            <input type="text" id="leaveNote" placeholder="選填">
+          </div>
+          <button type="submit" class="btn btn-success" id="submitLeaveBtn">送出假單</button>
+          <div class="error-msg" id="leaveErrorMsg"></div>
+          <div class="success-msg" id="leaveSuccessMsg"></div>
+        </form>
+      </div>
+
+      <!-- Detail stats -->
+      <div class="section">
+        <h3>特休明細</h3>
+        <div class="stat-row">
+          <span class="stat-label">本年特休</span>
+          <span class="stat-value" id="annualTotal">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">已使用</span>
+          <span class="stat-value" id="annualUsed">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">剩餘</span>
+          <span class="stat-value" id="annualRemain">-</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>結轉</h3>
+        <div class="stat-row">
+          <span class="stat-label">前年結轉天數</span>
+          <span class="stat-value" id="carryTotal">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">結轉狀態</span>
+          <span class="stat-value" id="carryStatus">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">結轉已使用</span>
+          <span class="stat-value" id="carryUsed">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">結轉剩餘</span>
+          <span class="stat-value" id="carryRemain">-</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>補休</h3>
+        <div class="stat-row">
+          <span class="stat-label">本年獲得</span>
+          <span class="stat-value" id="compEarned">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">已使用</span>
+          <span class="stat-value" id="compUsed">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">剩餘</span>
+          <span class="stat-value" id="compRemain">-</span>
+        </div>
+      </div>
+
+      <!-- Leave details table -->
+      <div class="section">
+        <h3>請假記錄</h3>
+        <div id="leaveTableContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Google Apps Script Web App URL
+    var API_URL = 'https://script.google.com/macros/s/AKfycbxRaMP48S16xmZGdvPxNm2YIH_pO1rebHh_tqnngD4XWPC-9Vq39NlQ8kupKuuiKV3W/exec';
+
+    // 儲存登入資訊（用於請假時驗證）
+    var currentUser = { emp_id: '', birthday: '' };
+
+    var loginForm = document.getElementById('loginForm');
+    var loginSection = document.getElementById('loginSection');
+    var dashboard = document.getElementById('dashboard');
+    var errorMsg = document.getElementById('errorMsg');
+    var loginBtn = document.getElementById('loginBtn');
+    var logoutBtn = document.getElementById('logoutBtn');
+    var toggleLeaveForm = document.getElementById('toggleLeaveForm');
+    var leaveForm = document.getElementById('leaveForm');
+    var submitLeaveForm = document.getElementById('submitLeaveForm');
+
+    // 呼叫 API
+    async function callAPI(data) {
+      var res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(data),
+        redirect: 'follow'
+      });
+      return await res.json();
+    }
+
+    // 登入
+    loginForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      errorMsg.textContent = '';
+      loginBtn.disabled = true;
+      loginBtn.textContent = '查詢中...';
+
+      var empId = document.getElementById('empId').value.trim();
+      var birthday = document.getElementById('birthday').value.trim();
+
+      try {
+        var json = await callAPI({
+          action: 'login',
+          emp_id: empId,
+          birthday: birthday
+        });
+
+        if (json.error) {
+          errorMsg.textContent = json.error;
+          return;
+        }
+
+        currentUser = { emp_id: empId, birthday: birthday };
+        renderDashboard(json.data);
+      } catch (err) {
+        errorMsg.textContent = '網路錯誤，請稍後再試';
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = '查詢特休';
+      }
+    });
+
+    // 登出
+    logoutBtn.addEventListener('click', function() {
+      loginSection.classList.remove('hidden');
+      dashboard.classList.remove('active');
+      leaveForm.classList.remove('active');
+      currentUser = { emp_id: '', birthday: '' };
+      document.getElementById('empId').value = '';
+      document.getElementById('birthday').value = '';
+    });
+
+    // 切換請假表單
+    toggleLeaveForm.addEventListener('click', function() {
+      leaveForm.classList.toggle('active');
+      toggleLeaveForm.textContent = leaveForm.classList.contains('active') ? '✕ 取消' : '+ 申請假單';
+    });
+
+    // 送出假單
+    submitLeaveForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var leaveErrorMsg = document.getElementById('leaveErrorMsg');
+      var leaveSuccessMsg = document.getElementById('leaveSuccessMsg');
+      var submitBtn = document.getElementById('submitLeaveBtn');
+      leaveErrorMsg.textContent = '';
+      leaveSuccessMsg.textContent = '';
+      submitBtn.disabled = true;
+      submitBtn.textContent = '送出中...';
+
+      try {
+        var json = await callAPI({
+          action: 'submit_leave',
+          emp_id: currentUser.emp_id,
+          birthday: currentUser.birthday,
+          date: document.getElementById('leaveDate').value,
+          leave_type: document.getElementById('leaveType').value,
+          days: parseFloat(document.getElementById('leaveDays').value),
+          note: document.getElementById('leaveNote').value
+        });
+
+        if (json.error) {
+          leaveErrorMsg.textContent = json.error;
+          return;
+        }
+
+        leaveSuccessMsg.textContent = '假單已送出！';
+        renderDashboard(json.data);
+
+        // 清除表單
+        document.getElementById('leaveDate').value = '';
+        document.getElementById('leaveType').value = '';
+        document.getElementById('leaveDays').value = '1';
+        document.getElementById('leaveNote').value = '';
+
+        setTimeout(function() { leaveSuccessMsg.textContent = ''; }, 3000);
+      } catch (err) {
+        leaveErrorMsg.textContent = '送出失敗，請稍後再試';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '送出假單';
+      }
+    });
+
+    // 取消假單（加一筆反向記錄）
+    async function cancelLeave(detail) {
+      if (!confirm('確定要取消這筆 ' + detail.type + ' (' + detail.date + ') 嗎？')) return;
+
+      try {
+        var json = await callAPI({
+          action: 'submit_leave',
+          emp_id: currentUser.emp_id,
+          birthday: currentUser.birthday,
+          date: detail.date,
+          leave_type: detail.type,
+          days: -detail.days,
+          note: '取消: ' + (detail.note || detail.date)
+        });
+
+        if (json.error) {
+          alert(json.error);
+          return;
+        }
+
+        renderDashboard(json.data);
+      } catch (err) {
+        alert('取消失敗');
+      }
+    }
+
+    function renderDashboard(data) {
+      loginSection.classList.add('hidden');
+      dashboard.classList.add('active');
+
+      var al = data.annual_leave;
+      document.getElementById('welcomeName').textContent = data.name + ' 的特休';
+      document.getElementById('totalDays').textContent = al.total;
+      document.getElementById('remainDays').textContent = al.remaining;
+      document.getElementById('compDays').textContent = al.comp_remaining;
+
+      document.getElementById('annualTotal').textContent = al.total + ' 天';
+      document.getElementById('annualUsed').textContent = al.used + ' 天';
+      document.getElementById('annualRemain').textContent = al.remaining + ' 天';
+
+      document.getElementById('carryTotal').textContent = al.carryover_total + ' 天';
+      document.getElementById('carryStatus').textContent = al.carryover_valid ? '有效 (6/30 前)' : '已過期';
+      document.getElementById('carryUsed').textContent = al.carryover_used + ' 天';
+      document.getElementById('carryRemain').textContent = al.carryover_remaining + ' 天';
+
+      document.getElementById('compEarned').textContent = al.comp_earned + ' 天';
+      document.getElementById('compUsed').textContent = al.comp_used + ' 天';
+      document.getElementById('compRemain').textContent = al.comp_remaining + ' 天';
+
+      renderLeaveTable(al.details);
+    }
+
+    function getBadgeClass(type) {
+      if (type === '特休') return 'badge-annual';
+      if (type === '結轉特休') return 'badge-carryover';
+      if (type === '補休(獲得)') return 'badge-comp-earn';
+      if (type === '補休(使用)') return 'badge-comp-use';
+      if (type === '事假') return 'badge-personal';
+      if (type === '病假') return 'badge-sick';
+      return 'badge-personal';
+    }
+
+    function renderLeaveTable(details) {
+      var container = document.getElementById('leaveTableContainer');
+
+      if (!details || details.length === 0) {
+        container.innerHTML = '<div class="empty-msg">本年度無請假記錄</div>';
+        return;
+      }
+
+      var html = '<table class="leave-table"><thead><tr>' +
+        '<th>日期</th><th>假別</th><th>天數</th><th>備註</th><th></th>' +
+        '</tr></thead><tbody>';
+
+      for (var i = 0; i < details.length; i++) {
+        var d = details[i];
+        var cancelBtn = d.days > 0
+          ? '<button class="btn-danger" onclick=\'cancelLeave(' + JSON.stringify(d) + ')\'>取消</button>'
+          : '<span style="color:#95a5a6;font-size:0.75rem">已取消</span>';
+
+        html += '<tr>' +
+          '<td>' + d.date + '</td>' +
+          '<td><span class="badge ' + getBadgeClass(d.type) + '">' + d.type + '</span></td>' +
+          '<td>' + d.days + '</td>' +
+          '<td>' + d.note + '</td>' +
+          '<td>' + cancelBtn + '</td>' +
+          '</tr>';
+      }
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+  </script>
+</body>
+</html>
