@@ -250,6 +250,18 @@
       gap: 0.8rem;
     }
 
+    .refresh-btn {
+      background: #3498db;
+      color: #fff;
+      border: none;
+      padding: 0.3rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      margin-right: 0.5rem;
+    }
+    .refresh-btn:hover { background: #2980b9; }
+
     .toggle-btn {
       display: inline-block;
       background: #27ae60;
@@ -300,7 +312,10 @@
     <div class="dashboard" id="dashboard">
       <div class="welcome">
         <h2 id="welcomeName"></h2>
-        <button class="logout-btn" id="logoutBtn">登出</button>
+        <div>
+          <button class="refresh-btn" id="refreshBtn">重新整理</button>
+          <button class="logout-btn" id="logoutBtn">登出</button>
+        </div>
       </div>
 
       <!-- Summary cards -->
@@ -479,6 +494,25 @@
         loginBtn.disabled = false;
         loginBtn.textContent = '查詢特休';
       }
+    });
+
+    // 重新整理（重新呼叫 API 取得最新狀態）
+    var refreshBtn = document.getElementById('refreshBtn');
+    refreshBtn.addEventListener('click', async function() {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = '更新中...';
+      try {
+        var json = await callAPI({
+          action: 'login',
+          emp_id: currentUser.emp_id,
+          birthday: currentUser.birthday
+        });
+        if (!json.error) {
+          renderDashboard(json.data);
+        }
+      } catch (err) {}
+      refreshBtn.disabled = false;
+      refreshBtn.textContent = '重新整理';
     });
 
     // 登出
