@@ -226,6 +226,9 @@
     .badge-personal { background: #f5f5f5; color: #7f8c8d; }
     .badge-sick { background: #fdf2e9; color: #e67e22; }
     .badge-cancel { background: #fce4ec; color: #c62828; }
+    .badge-pending { background: #fff3e0; color: #e65100; }
+    .badge-approved { background: #e8f5e9; color: #2e7d32; }
+    .badge-rejected { background: #ffebee; color: #c62828; }
 
     .empty-msg {
       text-align: center;
@@ -521,7 +524,7 @@
           return;
         }
 
-        leaveSuccessMsg.textContent = '假單已送出！';
+        leaveSuccessMsg.textContent = json.message || '假單已送出，等待審核！';
         renderDashboard(json.data);
 
         // 清除表單
@@ -601,6 +604,13 @@
       return 'badge-personal';
     }
 
+    function getStatusBadge(status) {
+      if (status === '待審核') return '<span class="badge badge-pending">待審核</span>';
+      if (status === '核准') return '<span class="badge badge-approved">核准</span>';
+      if (status === '駁回') return '<span class="badge badge-rejected">駁回</span>';
+      return '<span class="badge badge-approved">' + status + '</span>';
+    }
+
     function renderLeaveTable(details) {
       var container = document.getElementById('leaveTableContainer');
 
@@ -610,21 +620,26 @@
       }
 
       var html = '<table class="leave-table"><thead><tr>' +
-        '<th>日期</th><th>假別</th><th>天數</th><th>備註</th><th></th>' +
+        '<th>日期</th><th>假別</th><th>天數</th><th>狀態</th><th>備註</th><th></th>' +
         '</tr></thead><tbody>';
 
       for (var i = 0; i < details.length; i++) {
         var d = details[i];
-        var cancelBtn = d.days > 0
-          ? '<button class="btn-danger" onclick=\'cancelLeave(' + JSON.stringify(d) + ')\'>取消</button>'
-          : '<span style="color:#95a5a6;font-size:0.75rem">已取消</span>';
+        var actionBtn = '';
+
+        if (d.days > 0 && d.status === '待審核') {
+          actionBtn = '<button class="btn-danger" onclick=\'cancelLeave(' + JSON.stringify(d) + ')\'>撤回</button>';
+        } else if (d.days < 0) {
+          actionBtn = '<span style="color:#95a5a6;font-size:0.75rem">已取消</span>';
+        }
 
         html += '<tr>' +
           '<td>' + d.date + '</td>' +
           '<td><span class="badge ' + getBadgeClass(d.type) + '">' + d.type + '</span></td>' +
           '<td>' + d.days + '</td>' +
+          '<td>' + getStatusBadge(d.status) + '</td>' +
           '<td>' + d.note + '</td>' +
-          '<td>' + cancelBtn + '</td>' +
+          '<td>' + actionBtn + '</td>' +
           '</tr>';
       }
 
