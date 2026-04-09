@@ -576,19 +576,18 @@
       }
     });
 
-    // 取消假單（加一筆反向記錄）
+    // 撤回待審核假單（直接改狀態，不加新記錄）
     async function cancelLeave(detail) {
-      if (!confirm('確定要取消這筆 ' + detail.type + ' (' + detail.date + ') 嗎？')) return;
+      if (!confirm('確定要撤回這筆 ' + detail.type + ' (' + detail.date + ') 嗎？')) return;
 
       try {
         var json = await callAPI({
-          action: 'submit_leave',
+          action: 'withdraw_leave',
           emp_id: currentUser.emp_id,
           birthday: currentUser.birthday,
           date: detail.date,
           leave_type: detail.type,
-          days: -detail.days,
-          note: '取消: ' + (detail.note || detail.date)
+          days: detail.days
         });
 
         if (json.error) {
@@ -598,7 +597,7 @@
 
         renderDashboard(json.data);
       } catch (err) {
-        alert('取消失敗');
+        alert('撤回失敗');
       }
     }
 
@@ -642,6 +641,7 @@
       if (status === '待審核') return '<span class="badge badge-pending">待審核</span>';
       if (status === '核准') return '<span class="badge badge-approved">核准</span>';
       if (status === '駁回') return '<span class="badge badge-rejected">駁回</span>';
+      if (status === '已撤回') return '<span class="badge badge-personal">已撤回</span>';
       return '<span class="badge badge-approved">' + status + '</span>';
     }
 
