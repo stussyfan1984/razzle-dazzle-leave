@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Razzle Dazzle - 特休查詢</title>
+  <title>Razzle Dazzle - 員工服務</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -280,12 +280,56 @@
       .container { padding: 1rem; }
       .form-row { grid-template-columns: 1fr; }
     }
+
+    [hidden] { display: none !important; }
+    .service-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-bottom: 1.2rem; }
+    .service-tab { border: 1px solid #ccd5df; border-radius: 8px; padding: .85rem .5rem; background: #fff; color: #34495e; cursor: pointer; font: inherit; }
+    .service-tab.active { color: #fff; background: #2c3e50; border-color: #2c3e50; }
+    .service-tab:focus-visible, button:focus-visible { outline: 3px solid #66a3c5; outline-offset: 2px; }
+    .section-hint { color: #647481; font-size: .84rem; line-height: 1.65; margin-bottom: 1rem; }
+    #dashboardMessage:empty { display: none; }
+    #dashboardMessage { margin-bottom: 1rem; }
+    .payslip-list { display: grid; gap: .65rem; }
+    .payslip-choice { display: block; width: 100%; border: 1px solid #dbe2e8; border-radius: 8px; background: #fff; text-align: left; padding: .9rem; color: #2c3e50; font: inherit; cursor: pointer; }
+    .payslip-choice:hover, .payslip-choice.selected { border-color: #2c3e50; background: #f4f7fa; }
+    .payslip-choice-line { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .5rem; }
+    .payslip-choice small { display: block; color: #657582; font-size: .78rem; line-height: 1.6; }
+    .payslip-choice .net { display: block; font-size: .98rem; font-weight: 600; margin-top: .5rem; }
+    .version-latest { background: #e8f5e9; color: #2e7d32; white-space: nowrap; }
+    .version-old { background: #fff3e0; color: #a34b00; white-space: nowrap; }
+    .payslip-detail h2 { color: #2c3e50; font-size: 1.25rem; margin-bottom: .6rem; }
+    .payslip-meta { font-size: .84rem; color: #647481; line-height: 1.8; margin-bottom: 1rem; }
+    .version-warning { border-radius: 8px; background: #fff3e0; color: #894209; padding: .75rem; font-size: .85rem; line-height: 1.6; margin-bottom: 1rem; }
+    .salary-group { margin: 1.1rem 0; }
+    .salary-group h3 { margin-bottom: .3rem; }
+    .salary-line { display: flex; justify-content: space-between; gap: 1rem; padding: .55rem 0; font-size: .87rem; border-bottom: 1px solid #f0f2f5; }
+    .salary-line span:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .salary-totals { background: #f4f7fa; border-radius: 8px; padding: .55rem .9rem; }
+    .salary-totals .salary-net { color: #2c3e50; font-size: 1.12rem; font-weight: 700; border-bottom: 0; }
+    .print-btn { margin-top: 1rem; }
+    .table-scroll { overflow-x: auto; }
+    #printNotice { display: none; }
+    @media print {
+      @page { size: A4; margin: 18mm; }
+      body { background: white; color: #111; min-height: 0; }
+      body > * { display: none !important; }
+      body.printing-payslip > .container { display: block !important; width: 100%; max-width: none; padding: 0; margin: 0; }
+      body.printing-payslip .container > * { display: none !important; }
+      body.printing-payslip .container > #dashboard { display: block !important; }
+      body.printing-payslip #dashboard > * { display: none !important; }
+      body.printing-payslip #dashboard > #payslipPanel { display: block !important; }
+      body.printing-payslip #payslipPanel > * { display: none !important; }
+      body.printing-payslip #payslipPanel > #payslipDetail:not([hidden]) { display: block !important; box-shadow: none; padding: 0; border-radius: 0; }
+      body.printing-payslip .print-btn { display: none !important; }
+      .salary-group, .salary-totals { break-inside: avoid; }
+      body:not(.printing-payslip) > #printNotice { display: block !important; }
+    }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>Razzle Dazzle</h1>
-    <p>員工特休查詢系統</p>
+    <p>假勤查詢 · 我的薪資單</p>
   </div>
 
   <div class="container">
@@ -300,10 +344,10 @@
           </div>
           <div class="form-group">
             <label for="birthday">身分證字號</label>
-            <input type="text" id="birthday" placeholder="例: A123456789" maxlength="10" autocomplete="off" required>
+            <input type="password" id="birthday" placeholder="請輸入身分證字號" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" required>
           </div>
-          <button type="submit" class="btn" id="loginBtn">查詢特休</button>
-          <div class="error-msg" id="errorMsg"></div>
+          <button type="submit" class="btn" id="loginBtn">登入</button>
+          <div class="error-msg" id="errorMsg" role="alert"></div>
         </form>
       </div>
     </div>
@@ -318,6 +362,12 @@
         </div>
       </div>
 
+      <div class="service-tabs" role="tablist" aria-label="員工服務">
+        <button type="button" id="leaveTab" role="tab" aria-selected="true" aria-controls="leavePanel" class="service-tab active">假勤查詢</button>
+        <button type="button" id="payslipTab" role="tab" aria-selected="false" aria-controls="payslipPanel" class="service-tab">我的薪資單</button>
+      </div>
+      <p id="dashboardMessage" class="error-msg" role="alert"></p>
+      <div id="leavePanel" role="tabpanel" aria-labelledby="leaveTab">
       <!-- Summary cards -->
       <div class="cards">
         <div class="card primary">
@@ -433,253 +483,543 @@
         <h3>請假記錄</h3>
         <div id="leaveTableContainer"></div>
       </div>
+      </div>
+      <div id="payslipPanel" role="tabpanel" aria-labelledby="payslipTab" hidden>
+        <div class="section payslip-browser">
+          <h3>我的薪資單</h3>
+          <p class="section-hint">這裡只顯示主管已確認發布的薪資單。修改後會保留歷史版本，請以標示「最新版本」的內容為準。</p>
+          <div class="form-group">
+            <label for="payslipMonth">薪資月份</label>
+            <select id="payslipMonth" disabled><option value="">尚未載入</option></select>
+          </div>
+          <p id="payslipStatus" class="section-hint" role="status" aria-live="polite"></p>
+          <div id="payslipList" class="payslip-list"></div>
+        </div>
+        <div id="payslipDetail" class="section payslip-detail" aria-live="polite" hidden></div>
+      </div>
     </div>
   </div>
+  <p id="printNotice">請登入後開啟薪資單，再按「列印／另存 PDF」。</p>
 
   <script>
     // Google Apps Script Web App URL
     var API_URL = 'https://script.google.com/macros/s/AKfycbxRaMP48S16xmZGdvPxNm2YIH_pO1rebHh_tqnngD4XWPC-9Vq39NlQ8kupKuuiKV3W/exec';
 
-    // 儲存登入資訊（用於請假時驗證）
-    var currentUser = { emp_id: '', birthday: '' };
-
+    // 身分證僅用於登入。登入後只在目前分頁的記憶體保留短效 session。
+    var currentSession = null;
+    var sessionEpoch = 0;
+    var sessionTimer = null;
+    var activeRequests = new Set();
+    var activeTab = 'leave';
+    var payslips = [];
+    var payslipsLoaded = false;
+    var selectedPayslip = null;
+    var listRequestId = 0;
+    var detailRequestId = 0;
+    var leaveMutationPending = false;
+    var profileRequestId = 0;
     var loginForm = document.getElementById('loginForm');
     var loginSection = document.getElementById('loginSection');
     var dashboard = document.getElementById('dashboard');
     var errorMsg = document.getElementById('errorMsg');
     var loginBtn = document.getElementById('loginBtn');
     var logoutBtn = document.getElementById('logoutBtn');
+    var refreshBtn = document.getElementById('refreshBtn');
     var toggleLeaveForm = document.getElementById('toggleLeaveForm');
     var leaveForm = document.getElementById('leaveForm');
     var submitLeaveForm = document.getElementById('submitLeaveForm');
+    var payslipMonth = document.getElementById('payslipMonth');
+    var payslipList = document.getElementById('payslipList');
+    var payslipStatus = document.getElementById('payslipStatus');
+    var payslipDetail = document.getElementById('payslipDetail');
+    var statIds = ['totalDays', 'remainDays', 'compDays', 'annualTotal', 'annualUsed', 'annualRemain',
+      'carryTotal', 'carryStatus', 'carryUsed', 'carryRemain', 'compEarned', 'compUsed', 'compRemain'];
 
-    // 呼叫 API
-    async function callAPI(data) {
-      var res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(data),
-        redirect: 'follow'
-      });
-      return await res.json();
+    function element(tag, className, text) {
+      var node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = String(text);
+      return node;
+    }
+    function uiError(message, code) {
+      var error = new Error(message);
+      error.code = code || '';
+      return error;
+    }
+    function isStale(error) { return error && (error.code === 'STALE' || error.code === 'AUTH_REQUIRED'); }
+    function sessionIsCurrent(epoch) { return !!currentSession && sessionEpoch === epoch; }
+    function expiryMillis(value) {
+      if (typeof value === 'number') return value < 1e12 ? value * 1000 : value;
+      return Date.parse(value);
+    }
+    function sessionExpired() { return !currentSession || Date.now() >= currentSession.expiresAt; }
+
+    async function callAPI(data, independent) {
+      var controller = new AbortController();
+      var timeout = setTimeout(function() { controller.abort(); }, 45000);
+      if (!independent) activeRequests.add(controller);
+      try {
+        var response = await fetch(API_URL, {
+          method: 'POST', headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(data), redirect: 'follow', cache: 'no-store', signal: controller.signal
+        });
+        if (!response.ok) throw uiError('服務暫時無法連線，請稍後再試。');
+        var json;
+        try { json = await response.json(); }
+        catch (error) { throw uiError('系統回應格式不符，請聯絡管理者確認新版服務已部署。', 'API_VERSION'); }
+        if (!json || typeof json !== 'object') throw uiError('系統回應格式不符，請聯絡管理者。', 'API_VERSION');
+        return json;
+      } catch (error) {
+        if (error.name === 'AbortError') throw uiError('連線逾時或已取消，請稍後重新整理。');
+        if (error instanceof TypeError) throw uiError('網路連線失敗，請確認網路後再試。');
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+        activeRequests.delete(controller);
+      }
     }
 
-    // 登入
-    loginForm.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      errorMsg.textContent = '';
-      loginBtn.disabled = true;
-      loginBtn.textContent = '查詢中...';
-
-      var empId = document.getElementById('empId').value.trim();
-      var birthday = document.getElementById('birthday').value.trim();
-
-      try {
-        var json = await callAPI({
-          action: 'login',
-          emp_id: empId,
-          birthday: birthday
-        });
-
-        if (json.error) {
-          errorMsg.textContent = json.error;
-          return;
+    async function sessionAPI(action, values) {
+      var epoch = sessionEpoch;
+      if (sessionExpired()) {
+        clearSession('登入已逾時，請重新登入。');
+        throw uiError('登入已逾時，請重新登入。', 'AUTH_REQUIRED');
+      }
+      var token = currentSession.token;
+      var json;
+      try { json = await callAPI(Object.assign({}, values || {}, { action: action, session_token: token })); }
+      catch (error) {
+        if (!sessionIsCurrent(epoch)) throw uiError('已取消舊的查詢。', 'STALE');
+        throw error;
+      }
+      if (!sessionIsCurrent(epoch)) throw uiError('已取消舊的查詢。', 'STALE');
+      if (sessionExpired()) {
+        clearSession('登入已逾時，請重新登入。');
+        throw uiError('請重新登入。', 'AUTH_REQUIRED');
+      }
+      if (json.error || json.success === false) {
+        if (json.code === 'AUTH_REQUIRED') {
+          clearSession('登入已逾時或已登出，請重新登入。');
+          throw uiError('請重新登入。', 'AUTH_REQUIRED');
         }
+        throw uiError(json.error || '系統暫時無法處理，請稍後再試。', json.code);
+      }
+      if (!json.data || typeof json.data !== 'object') {
+        throw uiError('目前後端尚未提供這個功能，請聯絡管理者完成新版服務部署。', 'API_VERSION');
+      }
+      return json;
+    }
 
-        currentUser = { emp_id: empId, birthday: birthday };
+    function clearPayslipDetail() {
+      detailRequestId++;
+      selectedPayslip = null;
+      payslipDetail.replaceChildren();
+      payslipDetail.hidden = true;
+      document.body.classList.remove('printing-payslip');
+    }
+
+    function clearSession(message) {
+      sessionEpoch++;
+      clearTimeout(sessionTimer);
+      sessionTimer = null;
+      currentSession = null;
+      activeRequests.forEach(function(controller) { controller.abort(); });
+      activeRequests.clear();
+      listRequestId++;
+      profileRequestId++;
+      clearPayslipDetail();
+      payslips = [];
+      payslipsLoaded = false;
+      payslipList.replaceChildren();
+      payslipMonth.replaceChildren(element('option', '', '尚未載入'));
+      payslipMonth.disabled = true;
+      payslipStatus.textContent = '';
+      document.getElementById('welcomeName').textContent = '';
+      document.getElementById('leaveTableContainer').replaceChildren();
+      statIds.forEach(function(id) { document.getElementById(id).textContent = '-'; });
+      ['dashboardMessage', 'leaveErrorMsg', 'leaveSuccessMsg'].forEach(function(id) { document.getElementById(id).textContent = ''; });
+      loginForm.reset();
+      submitLeaveForm.reset();
+      leaveForm.classList.remove('active');
+      toggleLeaveForm.textContent = '+ 申請假單';
+      leaveMutationPending = false;
+      document.getElementById('submitLeaveBtn').disabled = false;
+      document.getElementById('submitLeaveBtn').textContent = '送出假單';
+      refreshBtn.disabled = false;
+      refreshBtn.textContent = '重新整理';
+      loginBtn.disabled = false;
+      loginBtn.textContent = '登入';
+      loginSection.classList.remove('hidden');
+      dashboard.classList.remove('active');
+      showTab('leave', false);
+      errorMsg.textContent = message || '';
+    }
+
+    function installSession(data) {
+      var expiresAt = expiryMillis(data.session_expires_at);
+      if (!data.session_token || !data.emp_id || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+        throw uiError('目前後端尚未更新安全登入功能，請聯絡管理者完成新版服務部署。', 'API_VERSION');
+      }
+      currentSession = { token: String(data.session_token), empId: String(data.emp_id), expiresAt: expiresAt };
+      var epoch = sessionEpoch;
+      clearTimeout(sessionTimer);
+      sessionTimer = setTimeout(function() {
+        if (sessionIsCurrent(epoch)) clearSession('登入已逾時，請重新登入。');
+      }, Math.min(expiresAt - Date.now(), 2147483647));
+    }
+
+    loginForm.addEventListener('submit', async function(event) {
+      event.preventDefault();
+      if (loginBtn.disabled) return;
+      var empId = document.getElementById('empId').value.trim();
+      var credential = document.getElementById('birthday').value.trim();
+      if (!empId || !credential) { errorMsg.textContent = '請輸入員工編號與身分證字號。'; return; }
+      clearSession();
+      document.getElementById('empId').value = empId;
+      var epoch = sessionEpoch;
+      loginBtn.disabled = true;
+      loginBtn.textContent = '登入中...';
+      var request = callAPI({ action: 'login', emp_id: empId, birthday: credential });
+      credential = '';
+      try {
+        var json = await request;
+        if (sessionEpoch !== epoch) return;
+        if (json.error || json.success === false) throw uiError(json.error || '登入失敗，請重新確認。', json.code);
+        installSession(json.data || {});
         renderDashboard(json.data);
-      } catch (err) {
-        errorMsg.textContent = '網路錯誤，請稍後再試';
+        document.getElementById('empId').value = '';
+      } catch (error) {
+        if (sessionEpoch === epoch) clearSession(error.message || '登入失敗，請稍後再試。');
       } finally {
-        loginBtn.disabled = false;
-        loginBtn.textContent = '查詢特休';
+        if (sessionEpoch === epoch) {
+          loginBtn.disabled = false;
+          loginBtn.textContent = '登入';
+        }
       }
     });
 
-    // 重新整理（重新呼叫 API 取得最新狀態）
-    var refreshBtn = document.getElementById('refreshBtn');
+    logoutBtn.addEventListener('click', function() {
+      var token = currentSession && currentSession.token;
+      clearSession('已登出。');
+      // 即使立即登入另一個帳號，也讓前一個 session 的撤銷請求完成。
+      if (token) callAPI({ action: 'logout', session_token: token }, true).catch(function() {});
+    });
+
+    function showTab(tab, shouldLoad) {
+      activeTab = tab;
+      ['leave', 'payslip'].forEach(function(name) {
+        var isSelected = tab === name;
+        var button = document.getElementById(name + 'Tab');
+        button.classList.toggle('active', isSelected);
+        button.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        document.getElementById(name + 'Panel').hidden = !isSelected;
+      });
+      if (tab === 'payslip' && shouldLoad !== false && !payslipsLoaded) loadPayslips();
+    }
+    document.getElementById('leaveTab').addEventListener('click', function() { showTab('leave'); });
+    document.getElementById('payslipTab').addEventListener('click', function() { showTab('payslip'); });
+
     refreshBtn.addEventListener('click', async function() {
+      if (refreshBtn.disabled) return;
+      var epoch = sessionEpoch;
       refreshBtn.disabled = true;
       refreshBtn.textContent = '更新中...';
+      document.getElementById('dashboardMessage').textContent = '';
       try {
-        var json = await callAPI({
-          action: 'login',
-          emp_id: currentUser.emp_id,
-          birthday: currentUser.birthday
-        });
-        if (!json.error) {
-          renderDashboard(json.data);
+        if (activeTab === 'payslip') await loadPayslips();
+        else {
+          var requestId = ++profileRequestId;
+          var json = await sessionAPI('session_profile');
+          if (sessionIsCurrent(epoch) && requestId === profileRequestId) renderDashboard(json.data);
         }
-      } catch (err) {}
-      refreshBtn.disabled = false;
-      refreshBtn.textContent = '重新整理';
+      } catch (error) {
+        if (sessionIsCurrent(epoch) && !isStale(error)) document.getElementById('dashboardMessage').textContent = error.message;
+      } finally {
+        if (sessionIsCurrent(epoch)) { refreshBtn.disabled = false; refreshBtn.textContent = '重新整理'; }
+      }
     });
 
-    // 登出
-    logoutBtn.addEventListener('click', function() {
-      loginSection.classList.remove('hidden');
-      dashboard.classList.remove('active');
-      leaveForm.classList.remove('active');
-      currentUser = { emp_id: '', birthday: '' };
-      document.getElementById('empId').value = '';
-      document.getElementById('birthday').value = '';
-    });
-
-    // 切換請假表單
     toggleLeaveForm.addEventListener('click', function() {
       leaveForm.classList.toggle('active');
       toggleLeaveForm.textContent = leaveForm.classList.contains('active') ? '✕ 取消' : '+ 申請假單';
     });
-
-    // 送出假單
-    submitLeaveForm.addEventListener('submit', async function(e) {
-      e.preventDefault();
+    submitLeaveForm.addEventListener('submit', async function(event) {
+      event.preventDefault();
+      if (leaveMutationPending) return;
+      var epoch = sessionEpoch;
       var leaveErrorMsg = document.getElementById('leaveErrorMsg');
       var leaveSuccessMsg = document.getElementById('leaveSuccessMsg');
       var submitBtn = document.getElementById('submitLeaveBtn');
       leaveErrorMsg.textContent = '';
       leaveSuccessMsg.textContent = '';
+      leaveMutationPending = true;
       submitBtn.disabled = true;
       submitBtn.textContent = '送出中...';
-
+      var requestId = ++profileRequestId;
       try {
-        var json = await callAPI({
-          action: 'submit_leave',
-          emp_id: currentUser.emp_id,
-          birthday: currentUser.birthday,
+        var json = await sessionAPI('submit_leave', {
           date: document.getElementById('leaveDate').value,
           leave_type: document.getElementById('leaveType').value,
           days: parseFloat(document.getElementById('leaveDays').value),
           note: document.getElementById('leaveNote').value
         });
-
-        if (json.error) {
-          leaveErrorMsg.textContent = json.error;
-          return;
-        }
-
+        if (!sessionIsCurrent(epoch)) return;
+        if (requestId === profileRequestId) renderDashboard(json.data);
         leaveSuccessMsg.textContent = json.message || '假單已送出，等待審核！';
-        renderDashboard(json.data);
-
-        // 清除表單
-        document.getElementById('leaveDate').value = '';
-        document.getElementById('leaveType').value = '';
-        document.getElementById('leaveDays').value = '1';
-        document.getElementById('leaveNote').value = '';
-
-        setTimeout(function() { leaveSuccessMsg.textContent = ''; }, 3000);
-      } catch (err) {
-        leaveErrorMsg.textContent = '送出失敗，請稍後再試';
+        submitLeaveForm.reset();
+      } catch (error) {
+        if (sessionIsCurrent(epoch) && !isStale(error)) leaveErrorMsg.textContent = error.message + ' 若不確定是否已送出，請先重新整理確認。';
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '送出假單';
+        if (sessionIsCurrent(epoch)) {
+          leaveMutationPending = false;
+          submitBtn.disabled = false;
+          submitBtn.textContent = '送出假單';
+        }
       }
     });
 
-    // 撤回待審核假單（直接改狀態，不加新記錄）
-    async function cancelLeave(detail) {
-      if (!confirm('確定要撤回這筆 ' + detail.type + ' (' + detail.date + ') 嗎？')) return;
-
+    async function cancelLeave(detail, button) {
+      if (leaveMutationPending || !confirm('確定要撤回這筆 ' + detail.type + '（' + detail.date + '）嗎？')) return;
+      var epoch = sessionEpoch;
+      var requestId = ++profileRequestId;
+      leaveMutationPending = true;
+      button.disabled = true;
+      document.getElementById('dashboardMessage').textContent = '';
       try {
-        var json = await callAPI({
-          action: 'withdraw_leave',
-          emp_id: currentUser.emp_id,
-          birthday: currentUser.birthday,
-          date: detail.date,
-          leave_type: detail.type,
-          days: detail.days
-        });
-
-        if (json.error) {
-          alert(json.error);
-          return;
-        }
-
-        renderDashboard(json.data);
-      } catch (err) {
-        alert('撤回失敗');
+        var json = await sessionAPI('withdraw_leave', { date: detail.date, leave_type: detail.type, days: detail.days });
+        if (sessionIsCurrent(epoch) && requestId === profileRequestId) renderDashboard(json.data);
+      } catch (error) {
+        if (sessionIsCurrent(epoch) && !isStale(error)) document.getElementById('dashboardMessage').textContent = error.message + ' 請重新整理確認假單狀態。';
+      } finally {
+        if (sessionIsCurrent(epoch)) { leaveMutationPending = false; button.disabled = false; }
       }
     }
 
     function renderDashboard(data) {
+      if (!currentSession || !data || !data.annual_leave) throw uiError('假勤資料格式不符，請聯絡管理者。');
+      if (data.emp_id !== undefined && String(data.emp_id) !== currentSession.empId) {
+        clearSession('帳號資料不一致，請重新登入。');
+        throw uiError('請重新登入。', 'AUTH_REQUIRED');
+      }
       loginSection.classList.add('hidden');
       dashboard.classList.add('active');
-
       var al = data.annual_leave;
-      document.getElementById('welcomeName').textContent = data.name + ' 的特休';
-      document.getElementById('totalDays').textContent = al.total;
-      document.getElementById('remainDays').textContent = al.remaining;
-      document.getElementById('compDays').textContent = al.comp_remaining;
-
-      document.getElementById('annualTotal').textContent = al.total + ' 天';
-      document.getElementById('annualUsed').textContent = al.used + ' 天';
-      document.getElementById('annualRemain').textContent = al.remaining + ' 天';
-
-      document.getElementById('carryTotal').textContent = al.carryover_total + ' 天';
-      document.getElementById('carryStatus').textContent = al.carryover_valid ? '有效 (6/30 前)' : '已過期';
-      document.getElementById('carryUsed').textContent = al.carryover_used + ' 天';
-      document.getElementById('carryRemain').textContent = al.carryover_remaining + ' 天';
-
-      document.getElementById('compEarned').textContent = al.comp_earned + ' 天';
-      document.getElementById('compUsed').textContent = al.comp_used + ' 天';
-      document.getElementById('compRemain').textContent = al.comp_remaining + ' 天';
-
+      document.getElementById('welcomeName').textContent = data.name + '，你好';
+      var values = {
+        totalDays: al.total, remainDays: al.remaining, compDays: al.comp_remaining,
+        annualTotal: al.total + ' 天', annualUsed: al.used + ' 天', annualRemain: al.remaining + ' 天',
+        carryTotal: al.carryover_total + ' 天', carryStatus: al.carryover_valid ? '有效（6/30 前）' : '已過期',
+        carryUsed: al.carryover_used + ' 天', carryRemain: al.carryover_remaining + ' 天',
+        compEarned: al.comp_earned + ' 天', compUsed: al.comp_used + ' 天', compRemain: al.comp_remaining + ' 天'
+      };
+      Object.keys(values).forEach(function(id) { document.getElementById(id).textContent = values[id]; });
       renderLeaveTable(al.details);
     }
 
     function getBadgeClass(type) {
-      if (type === '特休') return 'badge-annual';
-      if (type === '結轉特休') return 'badge-carryover';
-      if (type === '補休(獲得)') return 'badge-comp-earn';
-      if (type === '補休(使用)') return 'badge-comp-use';
-      if (type === '事假') return 'badge-personal';
-      if (type === '病假') return 'badge-sick';
-      return 'badge-personal';
+      return ({ '特休': 'badge-annual', '結轉特休': 'badge-carryover', '補休(獲得)': 'badge-comp-earn',
+        '補休(使用)': 'badge-comp-use', '事假': 'badge-personal', '病假': 'badge-sick' })[type] || 'badge-personal';
     }
-
-    function getStatusBadge(status) {
-      if (status === '待審核') return '<span class="badge badge-pending">待審核</span>';
-      if (status === '核准') return '<span class="badge badge-approved">核准</span>';
-      if (status === '駁回') return '<span class="badge badge-rejected">駁回</span>';
-      if (status === '已撤回') return '<span class="badge badge-personal">已撤回</span>';
-      return '<span class="badge badge-approved">' + status + '</span>';
-    }
-
     function renderLeaveTable(details) {
       var container = document.getElementById('leaveTableContainer');
-
-      if (!details || details.length === 0) {
-        container.innerHTML = '<div class="empty-msg">本年度無請假記錄</div>';
+      container.replaceChildren();
+      if (!Array.isArray(details) || !details.length) {
+        container.appendChild(element('div', 'empty-msg', '本年度無請假記錄'));
         return;
       }
-
-      var html = '<table class="leave-table"><thead><tr>' +
-        '<th>日期</th><th>假別</th><th>天數</th><th>狀態</th><th>備註</th><th></th>' +
-        '</tr></thead><tbody>';
-
-      for (var i = 0; i < details.length; i++) {
-        var d = details[i];
-        var actionBtn = '';
-
-        if (d.days > 0 && d.status === '待審核') {
-          actionBtn = '<button class="btn-danger" onclick=\'cancelLeave(' + JSON.stringify(d) + ')\'>撤回</button>';
-        } else if (d.days < 0) {
-          actionBtn = '<span style="color:#95a5a6;font-size:0.75rem">已取消</span>';
-        }
-
-        html += '<tr>' +
-          '<td>' + d.date + '</td>' +
-          '<td><span class="badge ' + getBadgeClass(d.type) + '">' + d.type + '</span></td>' +
-          '<td>' + d.days + '</td>' +
-          '<td>' + getStatusBadge(d.status) + '</td>' +
-          '<td>' + d.note + '</td>' +
-          '<td>' + actionBtn + '</td>' +
-          '</tr>';
-      }
-
-      html += '</tbody></table>';
-      container.innerHTML = html;
+      var scroll = element('div', 'table-scroll');
+      var table = element('table', 'leave-table');
+      var head = element('thead');
+      var headRow = element('tr');
+      ['日期', '假別', '天數', '狀態', '備註', '操作'].forEach(function(title) { headRow.appendChild(element('th', '', title)); });
+      head.appendChild(headRow);
+      table.appendChild(head);
+      var body = element('tbody');
+      details.forEach(function(detail) {
+        var row = element('tr');
+        row.appendChild(element('td', '', detail.date || ''));
+        var typeCell = element('td');
+        typeCell.appendChild(element('span', 'badge ' + getBadgeClass(detail.type), detail.type || ''));
+        row.appendChild(typeCell);
+        row.appendChild(element('td', '', detail.days));
+        var statusCell = element('td');
+        var statusClass = ({ '待審核': 'badge-pending', '核准': 'badge-approved', '駁回': 'badge-rejected', '已撤回': 'badge-personal' })[detail.status] || 'badge-personal';
+        statusCell.appendChild(element('span', 'badge ' + statusClass, detail.status || ''));
+        row.appendChild(statusCell);
+        row.appendChild(element('td', '', detail.note || ''));
+        var action = element('td');
+        if (detail.days > 0 && detail.status === '待審核') {
+          var button = element('button', 'btn btn-danger', '撤回');
+          button.type = 'button';
+          button.addEventListener('click', function() { cancelLeave(detail, button); });
+          action.appendChild(button);
+        } else if (detail.days < 0) action.textContent = '已取消';
+        row.appendChild(action);
+        body.appendChild(row);
+      });
+      table.appendChild(body);
+      scroll.appendChild(table);
+      container.appendChild(scroll);
     }
+
+    function formatNumber(value) {
+      return Number.isFinite(value) ? value.toLocaleString('zh-TW', { maximumFractionDigits: 20 }) : '—';
+    }
+    function formatPublished(value) {
+      var date = new Date(value);
+      if (!Number.isFinite(date.getTime())) return '時間待確認';
+      return date.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false,
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+    function versionBadge(isLatest) {
+      return element('span', 'badge ' + (isLatest ? 'version-latest' : 'version-old'), isLatest ? '最新版本' : '歷史版本');
+    }
+    async function loadPayslips() {
+      var epoch = sessionEpoch;
+      var requestId = ++listRequestId;
+      var previousMonth = payslipMonth.value;
+      clearPayslipDetail();
+      payslips = [];
+      payslipsLoaded = false;
+      payslipList.replaceChildren();
+      payslipMonth.disabled = true;
+      payslipMonth.replaceChildren(element('option', '', '載入中…'));
+      payslipStatus.textContent = '正在讀取已發布的薪資單…';
+      try {
+        var json = await sessionAPI('payslip_list');
+        if (!sessionIsCurrent(epoch) || requestId !== listRequestId) return;
+        if (!Array.isArray(json.data.payslips)) throw uiError('目前後端尚未提供薪資單查詢，請聯絡管理者完成新版服務部署。', 'API_VERSION');
+        payslips = json.data.payslips.filter(function(item) {
+          return item && typeof item.id === 'string' && /^\d{4}-\d{2}$/.test(item.month) &&
+            Number.isInteger(item.version) && item.version > 0 && Number.isFinite(item.net) && typeof item.is_latest === 'boolean';
+        }).sort(function(a, b) { return b.month.localeCompare(a.month) || b.version - a.version; });
+        if (payslips.length !== json.data.payslips.length) throw uiError('薪資單清單資料不完整，請聯絡管理者確認。');
+        payslipsLoaded = true;
+        payslipMonth.replaceChildren();
+        var months = Array.from(new Set(payslips.map(function(item) { return item.month; })));
+        if (!months.length) {
+          payslipMonth.appendChild(element('option', '', '尚無已發布薪資單'));
+          payslipStatus.textContent = '目前沒有已發布的薪資單。主管確認發布後，就會顯示在這裡。';
+          return;
+        }
+        months.forEach(function(month) {
+          var option = element('option', '', month.replace('-', ' 年 ') + ' 月');
+          option.value = month;
+          payslipMonth.appendChild(option);
+        });
+        payslipMonth.value = months.indexOf(previousMonth) >= 0 ? previousMonth : months[0];
+        payslipMonth.disabled = false;
+        renderPayslipList();
+      } catch (error) {
+        if (sessionIsCurrent(epoch) && requestId === listRequestId && !isStale(error)) {
+          payslips = [];
+          payslipsLoaded = false;
+          payslipMonth.replaceChildren(element('option', '', '讀取失敗'));
+          payslipStatus.textContent = error.message + ' 可按上方「重新整理」重試。';
+        }
+      }
+    }
+    payslipMonth.addEventListener('change', function() { clearPayslipDetail(); renderPayslipList(); });
+
+    function renderPayslipList() {
+      payslipList.replaceChildren();
+      var visible = payslips.filter(function(item) { return item.month === payslipMonth.value; });
+      payslipStatus.textContent = visible.length ? '共 ' + visible.length + ' 個已發布版本，點選查看明細。' : '這個月份沒有已發布的薪資單。';
+      visible.forEach(function(item) {
+        var button = element('button', 'payslip-choice' + (selectedPayslip && selectedPayslip.id === item.id ? ' selected' : ''));
+        button.type = 'button';
+        button.setAttribute('aria-label', item.month + ' 第 ' + item.version + ' 版，' + (item.is_latest ? '最新版本' : '歷史版本'));
+        var line = element('div', 'payslip-choice-line');
+        line.appendChild(element('strong', '', item.month + ' · 第 ' + item.version + ' 版'));
+        line.appendChild(versionBadge(item.is_latest));
+        button.appendChild(line);
+        button.appendChild(element('small', '', '發布時間：' + formatPublished(item.published_at)));
+        button.appendChild(element('span', 'net', '實領金額 NT$ ' + formatNumber(item.net)));
+        button.addEventListener('click', function() { loadPayslip(item.id); });
+        payslipList.appendChild(button);
+      });
+    }
+
+    function validatePayslip(data) {
+      var snapshot = data && data.snapshot;
+      return data && typeof data.id === 'string' && typeof data.is_latest === 'boolean' &&
+        Number.isInteger(data.version) && data.version > 0 && snapshot && snapshot.schema_version === 1 &&
+        snapshot.employee && currentSession && String(snapshot.employee.id) === currentSession.empId &&
+        /^\d{4}-\d{2}$/.test(snapshot.month) && snapshot.month === data.month && snapshot.currency === 'TWD' &&
+        Array.isArray(snapshot.items) && snapshot.items.every(function(item) {
+          return item && ['earning', 'deduction', 'info'].indexOf(item.kind) >= 0 &&
+            typeof item.label === 'string' && Number.isFinite(item.value) && ['元', '小時', '天'].indexOf(item.unit) >= 0;
+        }) && snapshot.totals && ['gross', 'deductions', 'net'].every(function(key) { return Number.isFinite(snapshot.totals[key]); });
+    }
+    async function loadPayslip(id) {
+      var epoch = sessionEpoch;
+      clearPayslipDetail();
+      var requestId = detailRequestId;
+      payslipDetail.hidden = false;
+      payslipDetail.appendChild(element('p', 'section-hint', '正在讀取薪資明細…'));
+      try {
+        var json = await sessionAPI('payslip_get', { id: id });
+        if (!sessionIsCurrent(epoch) || requestId !== detailRequestId) return;
+        if (json.data.id !== id || !validatePayslip(json.data)) throw uiError('薪資單資料不完整或帳號不一致，請重新整理；若仍出現，請聯絡管理者。');
+        selectedPayslip = json.data;
+        renderPayslipList();
+        renderPayslipDetail(json.data);
+      } catch (error) {
+        if (sessionIsCurrent(epoch) && requestId === detailRequestId && !isStale(error)) {
+          payslipDetail.replaceChildren(element('p', 'error-msg', error.message));
+        }
+      }
+    }
+
+    function salaryLine(label, value, className) {
+      var row = element('div', 'salary-line' + (className ? ' ' + className : ''));
+      row.appendChild(element('span', '', label));
+      row.appendChild(element('span', '', value));
+      return row;
+    }
+    function renderPayslipDetail(data) {
+      var snapshot = data.snapshot;
+      payslipDetail.replaceChildren();
+      payslipDetail.hidden = false;
+      payslipDetail.appendChild(element('h2', '', 'Razzle Dazzle · ' + snapshot.month + ' 薪資單'));
+      var meta = element('div', 'payslip-meta');
+      meta.appendChild(element('div', '', snapshot.employee.name + ' · 員工編號 ' + snapshot.employee.id));
+      meta.appendChild(element('div', '', '第 ' + data.version + ' 版 · 發布時間 ' + formatPublished(data.published_at)));
+      meta.appendChild(versionBadge(data.is_latest));
+      payslipDetail.appendChild(meta);
+      if (!data.is_latest) payslipDetail.appendChild(element('p', 'version-warning', '這是歷史版本，僅供核對修改紀錄。當月薪資請以最新版本為準。'));
+      [{ kind: 'earning', title: '應發項目' }, { kind: 'deduction', title: '扣款項目' }, { kind: 'info', title: '工時與其他資訊' }].forEach(function(group) {
+        var section = element('div', 'salary-group');
+        section.appendChild(element('h3', '', group.title));
+        snapshot.items.filter(function(item) { return item.kind === group.kind; }).forEach(function(item) {
+          section.appendChild(salaryLine(item.label, formatNumber(item.value) + ' ' + item.unit));
+        });
+        payslipDetail.appendChild(section);
+      });
+      var totals = element('div', 'salary-totals');
+      totals.appendChild(salaryLine('應發合計', 'NT$ ' + formatNumber(snapshot.totals.gross)));
+      totals.appendChild(salaryLine('扣款合計', 'NT$ ' + formatNumber(snapshot.totals.deductions)));
+      totals.appendChild(salaryLine('實領金額', 'NT$ ' + formatNumber(snapshot.totals.net), 'salary-net'));
+      payslipDetail.appendChild(totals);
+      var printButton = element('button', 'btn print-btn', '列印／另存 PDF');
+      printButton.type = 'button';
+      printButton.addEventListener('click', printPayslip);
+      payslipDetail.appendChild(printButton);
+    }
+    function printPayslip() {
+      if (sessionExpired()) { clearSession('登入已逾時，請重新登入後再列印。'); return; }
+      if (!selectedPayslip || payslipDetail.hidden || !validatePayslip(selectedPayslip)) return;
+      document.body.classList.add('printing-payslip');
+      try { window.print(); }
+      finally { document.body.classList.remove('printing-payslip'); }
+    }
+    window.addEventListener('beforeprint', function() {
+      if (sessionExpired()) clearSession('登入已逾時，請重新登入。');
+      if (!selectedPayslip || payslipDetail.hidden) document.body.classList.remove('printing-payslip');
+    });
+    window.addEventListener('afterprint', function() { document.body.classList.remove('printing-payslip'); });
+    window.addEventListener('pagehide', function() { clearSession(); });
+
   </script>
 </body>
 </html>
