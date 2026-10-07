@@ -84,10 +84,10 @@
     const raw=JSON.parse(await f.text()),items=raw.employees||raw.records;if(!Array.isArray(items))throw new Error('員工編號清單格式錯誤。');
     const records=items.map(r=>({id:String(r.employee_id||r.id||''),name:r.name,...(r.punch_name?{punch_name:r.punch_name}:{})}));
     const conflicts=raw.known_id_conflicts||[];if(!Array.isArray(conflicts))throw new Error('歷史編號衝突清單格式錯誤。');
-    const known_id_conflicts=conflicts.map(r=>({id:String(r.id||''),local_name:r.local_name,punch_name:r.punch_name,reason:r.reason,...(r.leave_name?{leave_name:r.leave_name}:{})}));
+    const known_id_conflicts=conflicts.map(r=>{if(r.retired!==undefined&&typeof r.retired!=='boolean')throw new Error('歷史編號的離職註記格式錯誤。');return {id:String(r.id||''),local_name:r.local_name,punch_name:r.punch_name,reason:r.reason,...(r.leave_name?{leave_name:r.leave_name}:{}),...(r.retired!==undefined?{retired:r.retired}:{})};});
     const reason=$('bootstrap-reason').value.trim();if(!reason)throw new Error('請填寫設定原因。');
     pendingBootstrap={records,known_id_conflicts,reason};const lines=records.map(r=>r.id+' · '+r.name+(r.punch_name?'（已核對打卡別名：'+r.punch_name+'）':''));
-    if(known_id_conflicts.length)lines.push('','歷史重號：僅保留編號，不合併人員；新薪資入口將暫停計薪。',...known_id_conflicts.map(r=>r.id+'：本機 '+r.local_name+'／打卡 '+r.punch_name+(r.leave_name?'／請假 '+r.leave_name:'')+'；'+r.reason));
+    if(known_id_conflicts.length)lines.push('','歷史重號：僅保留編號，不合併人員。',...known_id_conflicts.map(r=>r.id+'：本機 '+r.local_name+'／打卡 '+r.punch_name+(r.leave_name?'／請假 '+r.leave_name:'')+'；'+(r.retired===true?'已確認皆離職，編號永久保留；含此編號的舊資料不自動重新計薪。':'歸屬尚待處理，新薪資入口將暫停計薪。')+'；'+r.reason));
     $('registry-summary').textContent=lines.join('\n');$('registry-review').showModal();
   }));
   $('cancel-bootstrap').addEventListener('click',()=>{pendingBootstrap=null;$('registry-review').close();});
