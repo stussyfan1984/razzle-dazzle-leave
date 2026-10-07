@@ -11,12 +11,14 @@
   let credential = '', operator = '', cases = [], selected = null, busy = false, approvalRevision = null, pendingBootstrap = null, mustReload = false;
   const el = (tag,text,className) => { const n = document.createElement(tag); if(text !== undefined)n.textContent=text; if(className)n.className=className; return n; };
   function message(text,error=false){$('message').replaceChildren(text?el('div',text,'notice'+(error?' error':'')):el('span'));}
-  function setBusy(value){busy=value;document.querySelectorAll('button').forEach(b=>{b.disabled=value||b.dataset.locked==='true';});document.querySelectorAll('input,select,textarea').forEach(f=>{if(value){f.dataset.wasDisabled=String(f.disabled);f.disabled=true;}else if(f.dataset.wasDisabled!==undefined){f.disabled=f.dataset.wasDisabled==='true';delete f.dataset.wasDisabled;}});}
+  function setBusy(value){busy=value;document.querySelectorAll('button').forEach(b=>{if(b.closest&&b.closest('#ma-auth,#ma-owner-tools'))return;b.disabled=value||b.dataset.locked==='true';});document.querySelectorAll('input,select,textarea').forEach(f=>{if(f.closest&&f.closest('#ma-auth,#ma-owner-tools'))return;if(value){f.dataset.wasDisabled=String(f.disabled);f.disabled=true;}else if(f.dataset.wasDisabled!==undefined){f.disabled=f.dataset.wasDisabled==='true';delete f.dataset.wasDisabled;}});}
   function requireReload(){mustReload=true;document.querySelectorAll('button').forEach(b=>{if(b.dataset.mutation==='true'){b.dataset.locked='true';b.disabled=true;}});}
   async function api(action,extra={}){
-    if(!credential)throw new Error('請先輸入管理金鑰。');
+    const auth=window.RzdManagerAuth, named=auth&&auth.hasSession();
+    if(!named&&!credential)throw new Error('請先登入帳號或輸入店主備用金鑰。');
     const controller = new AbortController(), timer = setTimeout(()=>controller.abort(),55000);
     try{
+      if(named)return await auth.request(action,extra);
       const result = await fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},credentials:'omit',redirect:'follow',referrerPolicy:'no-referrer',body:JSON.stringify({...extra,action,admin_token:credential,operator}),signal:controller.signal});
       if(!result.ok)throw new Error('服務暫時無法連線。請保留同一筆申請，重新讀取結果。');
       const data = await result.json();
@@ -76,9 +78,19 @@
   function reviewApproval(){if(busy||mustReload)return;try{const changes=readChanges(true),reason=readReason();approvalRevision={case_id:selected.case_id,expected_revision:selected.revision,changes,reason};const dl=el('dl',undefined,'details-list');detailRow(dl,'姓名',selected.name);detailRow(dl,'收件信箱',selected.email);detailRow(dl,'到職日',changes.hire_date);detailRow(dl,'僱用類型',changes.employee_type);detailRow(dl,'薪資',changes.salary_type==='月薪'?changes.monthly_salary+' 元／月':changes.hourly_rate+' 元／時');$('approval-summary').replaceChildren(dl);$('approval').showModal();}catch(e){message(e.message,true);}}
   $('confirm-approval').addEventListener('click',()=>run(async()=>{if(!approvalRevision)throw new Error('請重新核對資料。');const payload=approvalRevision;approvalRevision=null;$('approval').close();const data=await api('hr_admin_approve',payload);selected=data.case;await loadList();renderDetail();message(selected.status==='READY'?'帳號建立結果已更新，請查看通知狀態。':'核准已記錄，請查看同步結果。');}));
   $('cancel-approval').addEventListener('click',()=>{$('approval').close();approvalRevision=null;});
-  $('login-form').addEventListener('submit',e=>{e.preventDefault();run(async()=>{credential=$('key').value.trim();operator=$('operator').value.trim();if(!operator)throw new Error('請填寫實際操作人姓名。');await loadList();$('key').value='';$('login').hidden=true;$('workspace').hidden=false;$('identity').textContent='操作人：'+operator;const id=new URLSearchParams(location.hash.slice(1)).get('case');if(id&&cases.some(c=>c.case_id===id))await loadCase(id);});});
+  $('login-form').addEventListener('submit',e=>{e.preventDefault();run(async()=>{credential=$('key').value.trim();operator=$('operator').value.trim();if(!operator)throw new Error('請填寫實際操作人姓名。');await loadList();$('key').value='';$('login').hidden=true;if($('ma-auth'))$('ma-auth').hidden=true;$('workspace').hidden=false;if($('registry-setup'))$('registry-setup').hidden=false;$('identity').textContent='操作人：'+operator;const id=new URLSearchParams(location.hash.slice(1)).get('case');if(id&&cases.some(c=>c.case_id===id))await loadCase(id);});});
   $('refresh').addEventListener('click',()=>run(async()=>{await loadList();if(selected)await loadCase(selected.case_id);}));
-  $('logout').addEventListener('click',()=>{credential='';operator='';selected=null;cases=[];approvalRevision=null;pendingBootstrap=null;$('key').value='';$('operator').value='';$('cases').replaceChildren();$('detail').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;message('已登出。');});
+  function resetWorkspace(){credential='';operator='';selected=null;cases=[];approvalRevision=null;pendingBootstrap=null;mustReload=false;$('key').value='';$('operator').value='';$('cases').replaceChildren();$('detail').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;}
+  $('logout').addEventListener('click',()=>{const auth=window.RzdManagerAuth;resetWorkspace();if(auth){auth.logout().catch(()=>{if(!auth.hasSession())message('此頁已登出；伺服器暫時無法確認登出，請關閉頁面。',true);});auth.showLogin();}message('已登出。');});
+  if(window.RzdManagerAuth)window.RzdManagerAuth.onSession(user=>{
+    resetWorkspace();
+    if(!user)return;
+    $('login').hidden=true;$('ma-auth').hidden=true;
+    $('identity').textContent='操作人：'+(user.canonical_operator||user.name)+'（'+user.email+'）';
+    $('registry-setup').hidden=true;
+    $('manager-roles').textContent='管理新人到職 · 發布員工薪資單';
+    run(async()=>{await loadList();$('workspace').hidden=false;const id=new URLSearchParams(location.hash.slice(1)).get('case');if(id&&cases.some(c=>c.case_id===id))await loadCase(id);});
+  });
   $('bootstrap').addEventListener('click',()=>run(async()=>{
     const f=$('registry-file').files[0];if(!f||f.size>150000)throw new Error('請選擇薪資工具產生的員工編號清單（150 KB 以內）。');
     const raw=JSON.parse(await f.text()),items=raw.employees||raw.records;if(!Array.isArray(items))throw new Error('員工編號清單格式錯誤。');
