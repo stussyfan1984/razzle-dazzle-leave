@@ -3,6 +3,7 @@
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbxRaMP48S16xmZGdvPxNm2YIH_pO1rebHh_tqnngD4XWPC-9Vq39NlQ8kupKuuiKV3W/exec';
   const $ = id => document.getElementById(id);
   const labels = {PENDING:'待審核',DRAFT:'待審核',APPROVED:'已核准，待同步',PROVISIONING:'同步中',SYNCING:'同步中',CANCELLED:'已取消',READY:'帳號已建立',BLOCKED:'需要處理',FAILED:'同步未完成'};
+  const overtimeDefaults = {ot1_rate:1.34,ot2_rate:1.67};
   const salaryFields = [
     ['hire_date','到職日期','date'],['employee_type','僱用類型',['正職','兼職']],['salary_type','薪資類型',['月薪','時薪']],['status','在職狀態',['在職','試用期']],
     ['hourly_rate','時薪（元）','number'],['monthly_salary','月薪（元）','number'],['meal_allowance','伙食津貼（元）','number'],
@@ -52,10 +53,12 @@
       if(Array.isArray(type)){field=el('select');const blank=el('option','請選擇');blank.value='';field.append(blank);type.forEach(v=>{const opt=el('option',v);opt.value=v;field.append(opt);});}
       else {field=el('input');field.type=type;if(type==='number'){field.min=key.startsWith('ot')?'1':'0';field.step='0.01';}}
       field.id='field-'+key;field.name=key;field.disabled=!editable;
-      const value = c.salary && c.salary[key] !== undefined ? c.salary[key] : (key==='hire_date'?c.hire_date:undefined);
+      let value = c.salary && c.salary[key] !== undefined ? c.salary[key] : (key==='hire_date'?c.hire_date:undefined);
+      if(editable && Object.prototype.hasOwnProperty.call(overtimeDefaults,key) && (value===undefined||value===null||value===''))value=overtimeDefaults[key];
       if(value!==undefined&&value!==null)field.value=String(value);lab.append(field);grid.append(lab);
     });form.append(grid);
     const note=el('p','金額請依實際約定與投保資料填寫；不適用的金額填 0。','hint');form.append(note);
+    if(editable)form.append(el('p','加班倍率預設為 1.34、1.67；需要時可自行調整，儲存及核准都會保留紀錄。','hint'));
     const reasonLabel=el('label','儲存／核准原因（必填）');const reason=el('textarea');reason.id='reason';reason.maxLength=500;reasonLabel.append(reason);form.append(reasonLabel);
     const actions=el('div',undefined,'actions');
     if(editable){const save=el('button','儲存草稿','secondary');save.type='button';save.addEventListener('click',()=>run(saveDraft));const approve=el('button','核對並核准');approve.type='button';approve.addEventListener('click',reviewApproval);[save,approve].forEach(b=>{b.dataset.mutation='true';b.dataset.locked=String(mustReload);b.disabled=mustReload;});actions.append(save,approve);const cancel=el('button','取消這筆申請','secondary');cancel.type='button';cancel.dataset.mutation='true';cancel.dataset.locked=String(mustReload);cancel.disabled=mustReload;cancel.addEventListener('click',()=>run(async()=>{const why=readReason();if(!window.confirm('確定取消 '+c.name+' 的這筆到職申請？既有紀錄會保留，且不建立帳號。'))return;const data=await api('hr_admin_cancel',{case_id:c.case_id,expected_revision:c.revision,reason:why});selected=data.case;await loadList();renderDetail();message('申請已取消，紀錄已保留。');}));actions.append(cancel);}
@@ -65,7 +68,7 @@
   }
   function stageText(c){
     const parts=[];if(c.pipeline){Object.entries(c.pipeline).forEach(([k,v])=>{const names={punch:'打卡帳號',leave:'請假帳號',punch_provision:'打卡建檔',punch_ready:'打卡啟用準備',leave_ready:'請假帳號',leave_pending:'請假建檔',master:'員工主檔'};if(typeof v==='string'||typeof v==='boolean')parts.push((names[k]||k)+'：'+(typeof v==='boolean'?(v?'完成':'待完成'):String(v)));});}
-    const mail=c.welcome_mail||c.mail||c.welcome;if(mail){const s=typeof mail==='string'?mail:(mail.status||mail.welcome_status);if(s)parts.push('啟用通知：'+({SENT:'已寄送',NONE:'尚未寄送',DISABLED:'尚未啟用寄信',UNKNOWN:'寄送結果未確認，請主管確認信件後處理',SENDING:'寄送中',PENDING:'待寄送'}[s]||s));}
+    const mail=c.welcome_mail||c.mail||c.welcome;if(mail){const s=typeof mail==='string'?mail:(mail.status||mail.welcome_status);if(s)parts.push('啟用通知：'+({SENT:'Google 已接受寄送，請員工確認收信（也請查看垃圾郵件）',NONE:'尚未寄送',DISABLED:'尚未啟用寄信',UNKNOWN:'寄送結果未確認，請主管確認信件後處理',SENDING:'寄送中',PENDING:'待寄送'}[s]||s));}
     return parts.join('\n')||'核准前不會建立員工帳號。';
   }
   function readChanges(strict=false){
