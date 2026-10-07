@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://script.google.com https://script.googleusercontent.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
-<title>主管工作台｜Razzle Dazzle</title><link rel="stylesheet" href="onboarding.css"><link rel="stylesheet" href="manager.css">
+<title>主管工作台｜Razzle Dazzle</title><link rel="stylesheet" href="onboarding.css?v=6e8ddce1cad5"><link rel="stylesheet" href="manager.css">
 </head>
 <body>
 <header><div class="brand">RAZZLE DAZZLE · 人事管理</div><h1>主管工作台</h1><p>管理新人到職與薪資單，每次操作都留下具名紀錄。</p></header>
@@ -24,7 +24,7 @@
 <section id="workspace" hidden>
 <section class="card manager-tools"><div class="toolbar"><h2>新人到職與薪資單</h2><span id="manager-roles" class="hint"></span></div><p class="hint">本頁處理新人到職。發布薪資單請開啟電腦的薪資發布工具，使用同一組主管 Email 與密碼登入。</p></section>
 <div class="toolbar"><span id="identity"></span><div><button id="refresh" class="secondary">重新整理</button><button id="logout" class="secondary">登出</button></div></div>
-<div class="layout"><aside class="card"><h2>到職申請</h2><p id="case-count" class="hint"></p><div id="cases"></div></aside><section id="detail" class="card"><p>請選擇一筆申請。</p></section></div>
+<div class="layout"><aside class="card"><h2>到職申請</h2><label for="case-view">顯示申請</label><select id="case-view"><option value="pending">待處理</option><option value="history">已處理紀錄</option></select><p id="case-count" class="hint"></p><div id="cases"></div><div id="case-pagination" class="case-pagination" hidden><button id="case-prev" type="button" class="secondary">上一頁</button><span id="case-page" class="hint"></span><button id="case-next" type="button" class="secondary">下一頁</button></div></aside><section id="detail" class="card"><p>請選擇一筆申請。</p></section></div>
 <details id="registry-setup" class="card setup"><summary>首次設定：保留既有員工編號</summary><p>匯入薪資工具產生的編號清單，避免分配到已經使用過的編號。檔案只需要員工編號與姓名。</p><label>編號清單 JSON<input id="registry-file" type="file" accept=".json,application/json"></label><label>設定原因<input id="bootstrap-reason" maxlength="500" value="首次整合到職流程，保留既有員工編號"></label><button id="bootstrap" class="secondary">核對並保留編號</button></details>
 </section>
 <section id="ma-owner-tools" class="card" hidden><h2>主管帳號管理</h2><p class="hint">僅店主可查看與撤銷主管權限，撤銷後既有登入也會失效。</p><button id="ma-load-accounts" class="secondary" type="button">讀取主管帳號</button><div id="ma-accounts" class="account-list"></div></section>
@@ -32,5 +32,5 @@
 <dialog id="approval"><h2>確認核准到職</h2><div id="approval-summary"></div><p>系統會建立統一員工編號與帳號；完成後依通知設定寄送啟用信。若中途失敗，請從同一筆申請重試。</p><div class="toolbar"><button id="cancel-approval" class="secondary">返回修改</button><button id="confirm-approval">核准並建立</button></div></dialog>
 <dialog id="registry-review"><h2>核對既有員工編號</h2><p>這份清單只用來保留已用過的編號。歷史重號不會合併，既有名冊與薪資紀錄不會更改。</p><pre id="registry-summary"></pre><div class="toolbar"><button id="cancel-bootstrap" class="secondary">返回核對</button><button id="confirm-bootstrap">確認保留這些編號</button></div></dialog>
 <footer>所有儲存、核准與同步結果都會保留紀錄。打卡 PIN 由員工透過專屬連結設定。</footer>
-<script src="manager.js?v=f99a88a058fe"></script><script src="onboarding.js?v=03f413d3cd88"></script>
+<script src="manager.js?v=f99a88a058fe"></script><script src="onboarding.js?v=363c85bb93fd"></script>
 </body></html>

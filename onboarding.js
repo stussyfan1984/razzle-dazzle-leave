@@ -9,7 +9,7 @@
     ['hourly_rate','時薪（元）','number'],['monthly_salary','月薪（元）','number'],['meal_allowance','伙食津貼（元）','number'],
     ['ot1_rate','加班 1 倍率','number'],['ot2_rate','加班 2 倍率','number'],['labor_ins_base','勞保投保金額（元）','number'],['health_ins_base','健保投保金額（元）','number'],['labor_employee','勞保員工負擔（元）','number'],['health_employee','健保員工負擔（元）','number']
   ];
-  let credential = '', operator = '', cases = [], selected = null, busy = false, approvalRevision = null, pendingBootstrap = null, mustReload = false;
+  let credential = '', operator = '', cases = [], selected = null, busy = false, approvalRevision = null, pendingBootstrap = null, mustReload = false, caseView = 'pending', casePage = 0;
   const el = (tag,text,className) => { const n = document.createElement(tag); if(text !== undefined)n.textContent=text; if(className)n.className=className; return n; };
   function message(text,error=false){$('message').replaceChildren(text?el('div',text,'notice'+(error?' error':'')):el('span'));}
   function setBusy(value){busy=value;document.querySelectorAll('button').forEach(b=>{if(b.closest&&b.closest('#ma-auth,#ma-owner-tools'))return;b.disabled=value||b.dataset.locked==='true';});document.querySelectorAll('input,select,textarea').forEach(f=>{if(f.closest&&f.closest('#ma-auth,#ma-owner-tools'))return;if(value){f.dataset.wasDisabled=String(f.disabled);f.disabled=true;}else if(f.dataset.wasDisabled!==undefined){f.disabled=f.dataset.wasDisabled==='true';delete f.dataset.wasDisabled;}});}
@@ -28,13 +28,31 @@
     }catch(e){if(['hr_admin_save','hr_admin_approve','hr_admin_retry','hr_admin_cancel','hr_admin_reissue'].includes(action)){requireReload();}if(e.name==='AbortError')throw new Error('等待逾時，操作可能已完成。請重新讀取這筆申請後再繼續，避免重複操作。');throw e;}finally{clearTimeout(timer);}
   }
   async function run(work){if(busy)return;setBusy(true);message('');try{await work();}catch(e){message(e.message,true);}finally{setBusy(false);}}
-  async function loadList(){const data=await api('hr_admin_list');cases=data.cases||[];renderCases();return data;}
-  function renderCases(){
-    $('case-count').textContent=cases.length+' 筆申請';$('cases').replaceChildren();
-    if(!cases.length)$('cases').append(el('p','目前沒有新的到職申請。','hint'));
-    cases.forEach(c=>{const b=el('button',c.name||'待確認姓名','case'+(selected&&selected.case_id===c.case_id?' selected':''));b.append(el('small',labels[c.status]||c.status));b.addEventListener('click',()=>run(()=>loadCase(c.case_id)));$('cases').append(b);});
+  function needsAttention(c){return c.status!=='CANCELLED' && (c.status!=='READY' || !!c.issue || !!c.reissue_pending || c.welcome_mail!=='SENT');}
+  function visibleCases(){return cases.filter(c=>caseView==='pending'?needsAttention(c):!needsAttention(c));}
+  async function loadList(){
+    const data=await api('hr_admin_list');cases=data.cases||[];
+    if(selected&&!visibleCases().some(c=>c.case_id===selected.case_id)){selected=null;renderDetail();}
+    renderCases();return data;
   }
-  async function loadCase(id){const data=await api('hr_admin_detail',{case_id:id});selected=data.case;mustReload=false;renderCases();renderDetail();}
+  function renderCases(){
+    const pending=cases.filter(needsAttention).length, shown=visibleCases(), pages=Math.max(1,Math.ceil(shown.length/20));
+    casePage=Math.min(casePage,pages-1);$('case-view').value=caseView;
+    $('case-count').textContent='待處理 '+pending+' 筆 · 已處理 '+(cases.length-pending)+' 筆';$('cases').replaceChildren();
+    if(!shown.length)$('cases').append(el('p',caseView==='pending'?'目前沒有待處理的到職申請。已完成的申請可切換到「已處理紀錄」查看。':'目前沒有已處理紀錄。','hint'));
+    shown.slice(casePage*20,(casePage+1)*20).forEach(c=>{const b=el('button',c.name||'待確認姓名','case'+(selected&&selected.case_id===c.case_id?' selected':''));b.append(el('small',c.status==='READY'&&needsAttention(c)?'帳號已建立，仍需處理':labels[c.status]||c.status));b.addEventListener('click',()=>run(()=>loadCase(c.case_id)));$('cases').append(b);});
+    $('case-page').textContent=(casePage+1)+' / '+pages+' 頁';$('case-pagination').hidden=shown.length<=20;
+    $('case-prev').dataset.locked=String(casePage===0);$('case-next').dataset.locked=String(casePage===pages-1);
+    $('case-prev').disabled=busy||casePage===0;$('case-next').disabled=busy||casePage===pages-1;
+  }
+  async function loadCase(id){
+    const data=await api('hr_admin_detail',{case_id:id});selected=data.case;mustReload=false;
+    caseView=needsAttention(selected)?'pending':'history';
+    casePage=Math.max(0,Math.floor(visibleCases().findIndex(c=>c.case_id===id)/20));renderCases();renderDetail();
+  }
+  $('case-view').addEventListener('change',()=>{if(busy)return;caseView=$('case-view').value;casePage=0;if(selected&&!visibleCases().some(c=>c.case_id===selected.case_id)){selected=null;renderDetail();}renderCases();});
+  $('case-prev').addEventListener('click',()=>{if(busy||casePage===0)return;casePage--;renderCases();});
+  $('case-next').addEventListener('click',()=>{if(busy||(casePage+1)*20>=visibleCases().length)return;casePage++;renderCases();});
   function detailRow(dl,key,value){dl.append(el('dt',key),el('dd',value==null||value===''?'尚未填寫':String(value)));}
   function renderDetail(){
     const c=selected, root=$('detail');root.replaceChildren();if(!c){root.append(el('p','請選擇一筆申請。'));return;}
@@ -79,11 +97,11 @@
   function readReason(){const value=$('reason').value.trim();if(!value)throw new Error('請填寫本次儲存／核准原因。');return value;}
   async function saveDraft(){if(mustReload)throw new Error('請先重新讀取此筆。');const changes=readChanges(),reason=readReason();const data=await api('hr_admin_save',{case_id:selected.case_id,expected_revision:selected.revision,changes,reason});selected=data.case;await loadList();renderDetail();message('草稿已儲存，尚未建立帳號。');}
   function reviewApproval(){if(busy||mustReload)return;try{const changes=readChanges(true),reason=readReason();approvalRevision={case_id:selected.case_id,expected_revision:selected.revision,changes,reason};const dl=el('dl',undefined,'details-list');detailRow(dl,'姓名',selected.name);detailRow(dl,'收件信箱',selected.email);detailRow(dl,'到職日',changes.hire_date);detailRow(dl,'僱用類型',changes.employee_type);detailRow(dl,'薪資',changes.salary_type==='月薪'?changes.monthly_salary+' 元／月':changes.hourly_rate+' 元／時');$('approval-summary').replaceChildren(dl);$('approval').showModal();}catch(e){message(e.message,true);}}
-  $('confirm-approval').addEventListener('click',()=>run(async()=>{if(!approvalRevision)throw new Error('請重新核對資料。');const payload=approvalRevision;approvalRevision=null;$('approval').close();const data=await api('hr_admin_approve',payload);selected=data.case;await loadList();renderDetail();message(selected.status==='READY'?'帳號建立結果已更新，請查看通知狀態。':'核准已記錄，請查看同步結果。');}));
+  $('confirm-approval').addEventListener('click',()=>run(async()=>{if(!approvalRevision)throw new Error('請重新核對資料。');const payload=approvalRevision;approvalRevision=null;$('approval').close();const data=await api('hr_admin_approve',payload);selected=data.case;const completed=!needsAttention(selected);await loadList();renderDetail();message(completed?'帳號建立及通知已完成，申請已移至「已處理紀錄」。':'核准已記錄，請查看同步或通知結果。');}));
   $('cancel-approval').addEventListener('click',()=>{$('approval').close();approvalRevision=null;});
   $('login-form').addEventListener('submit',e=>{e.preventDefault();run(async()=>{credential=$('key').value.trim();operator=$('operator').value.trim();if(!operator)throw new Error('請填寫實際操作人姓名。');await loadList();$('key').value='';$('login').hidden=true;if($('ma-auth'))$('ma-auth').hidden=true;$('workspace').hidden=false;if($('registry-setup'))$('registry-setup').hidden=false;$('identity').textContent='操作人：'+operator;const id=new URLSearchParams(location.hash.slice(1)).get('case');if(id&&cases.some(c=>c.case_id===id))await loadCase(id);});});
   $('refresh').addEventListener('click',()=>run(async()=>{await loadList();if(selected)await loadCase(selected.case_id);}));
-  function resetWorkspace(){credential='';operator='';selected=null;cases=[];approvalRevision=null;pendingBootstrap=null;mustReload=false;$('key').value='';$('operator').value='';$('cases').replaceChildren();$('detail').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;}
+  function resetWorkspace(){credential='';operator='';selected=null;cases=[];approvalRevision=null;pendingBootstrap=null;mustReload=false;caseView='pending';casePage=0;$('case-view').value='pending';$('case-count').textContent='';$('case-pagination').hidden=true;$('key').value='';$('operator').value='';$('cases').replaceChildren();$('detail').replaceChildren();$('workspace').hidden=true;$('login').hidden=false;}
   $('logout').addEventListener('click',()=>{const auth=window.RzdManagerAuth;resetWorkspace();if(auth){auth.logout().catch(()=>{if(!auth.hasSession())message('此頁已登出；伺服器暫時無法確認登出，請關閉頁面。',true);});auth.showLogin();}message('已登出。');});
   if(window.RzdManagerAuth)window.RzdManagerAuth.onSession(user=>{
     resetWorkspace();
