@@ -30,7 +30,7 @@
     }catch(error){if(error.name==='AbortError')throw new Error('等待逾時，操作可能已完成。請重新查看狀態；請勿重複提交。');throw error;}finally{clearTimeout(timer);}
   }
   function password(value,repeat){
-    if([...value].length<15||new TextEncoder().encode(value).length>72)throw new Error('密碼至少 15 個字元，最多 72 個 UTF-8 位元組；建議使用容易記住的長句。');
+    if([...value].length<7||new TextEncoder().encode(value).length>72)throw new Error('密碼至少 7 個字元，最多 72 個 UTF-8 位元組；建議使用容易記住的長句。');
     if(value!==repeat)throw new Error('兩次輸入的密碼不一致。');
     return value;
   }
