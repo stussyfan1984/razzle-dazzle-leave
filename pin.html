@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer"><title>設定打卡 PIN｜Razzle Dazzle</title>
+  <link rel="stylesheet" href="pin.css">
+</head>
+<body><main>
+  <p class="brand">RAZZLE DAZZLE · 到職啟用</p><h1>設定你的打卡 PIN</h1>
+  <p>設定一次，之後打卡時就使用這組 PIN。可以使用 0 開頭，例如 0123。</p>
+  <div id="status" class="notice" role="status" aria-live="polite">請從到職通知信中的專屬連結開啟。</div>
+  <form id="link-form" hidden><label for="activation-link">貼上通知信中的完整啟用連結</label>
+    <textarea id="activation-link" rows="3" autocomplete="off" spellcheck="false" required placeholder="若舊連結開啟失敗，請從信件複製「設定打卡 PIN」的連結，貼在這裡。"></textarea>
+    <button type="submit">讀取我的啟用資料</button>
+  </form>
+  <form id="pin-form" hidden autocomplete="off">
+    <p id="employee" class="employee"></p><p id="expiry" class="hint"></p>
+    <label for="pin">4 位數字 PIN</label><input id="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="new-password" required>
+    <label for="pin-again">再次輸入 PIN</label><input id="pin-again" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="new-password" required>
+    <p class="hint">請記住這組 PIN。啟用連結只能完成第一次設定，無法更改已設定的 PIN。</p>
+    <button id="submit" type="submit">設定 PIN 並啟用</button>
+  </form>
+  <a id="clock-link" href="https://script.google.com/macros/s/AKfycbwdCO0HQegU7WFsdYe7zpo4KZtwLO_xY_26Mac2tTqK-cac0EZCshxrkq5Y-emVSq6I/exec" hidden>前往店內打卡系統</a>
+  <p class="hint footnote">這是你的專屬啟用連結，請勿轉寄。到期或資料有誤時，請聯絡主管。</p>
+</main><script src="pin.js?v=15f05513a9be"></script></body></html>
