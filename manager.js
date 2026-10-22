@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
   const ROLE_LABELS = {onboarding:'管理新人到職',payslip_publish:'發布員工薪資單',owner:'管理主管帳號'};
   const listeners = [];
-  let session = null, linkToken = '', linkMode = '', pending = false, generation = 0;
+  let session = null, linkToken = '', linkMode = '', pending = false, generation = 0, requestSequence = 0;
   const node = (tag,text,className) => {const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
   function status(text,error=false){const target=$('ma-auth').hidden?$('message'):$('ma-message');target.replaceChildren(node('div',text,'notice'+(error?' error':'')));}
   function notify(){listeners.forEach(fn=>fn(session?session.user:null));}
@@ -21,9 +21,21 @@
     try{
       const payload={...extra,action};
       if(authenticated)payload.ma_session_token=session.session_token;
-      const response=await fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),credentials:'omit',redirect:'follow',referrerPolicy:'no-referrer',signal:timerController.signal});
-      if(!response.ok)throw new Error('暫時無法連線，請稍後再試。');
-      const result=await response.json();
+      // Google ContentService redirects to a one-time result URL. Never reuse a cached redirect.
+      const retryable=['ma_login','ma_session','ma_approval_info','ma_list_accounts','hr_admin_list','hr_admin_detail'].includes(action);
+      const unavailable=()=>new Error('登入服務暫時無法連線，請稍後重新登入。若仍失敗，請告知主管。');
+      let response;
+      for(let attempt=0;attempt<(retryable?2:1);attempt++){
+        if(requestGeneration!==generation)throw new Error('登入狀態已變更，請重新登入後繼續。');
+        const url=new URL(ENDPOINT);url.searchParams.set('rzd_req',Date.now().toString(36)+'-'+(++requestSequence).toString(36)+'-'+Math.random().toString(36).slice(2));
+        try{response=await fetch(url.href,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),credentials:'omit',redirect:'follow',cache:'no-store',referrerPolicy:'no-referrer',signal:timerController.signal});}
+        catch(error){if(retryable&&attempt===0&&error.name==='TypeError')continue;if(error.name==='TypeError')throw unavailable();throw error;}
+        if(response.ok)break;
+        if(retryable&&attempt===0&&[404,408,500,502,503,504].includes(response.status))continue;
+        throw unavailable();
+      }
+      let result;try{result=await response.json();}catch(_){throw new Error('服務回應暫時異常，請稍後再試；請勿重複送出核准或寄信。');}
+      if(!result||typeof result.success!=='boolean')throw new Error('服務回應格式異常，請稍後再試。');
       if(requestGeneration!==generation)throw new Error('登入狀態已變更，請重新登入後繼續。');
       if(!result.success){const error=new Error(result.error||'操作未完成，請稍後再試。');error.code=result.code;if(authenticated&&/SESSION|REVOKED|DISABLED/.test(String(result.code||'')))clearSession();throw error;}
       return result.data;
