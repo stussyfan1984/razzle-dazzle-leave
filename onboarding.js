@@ -9,7 +9,7 @@
     ['hourly_rate','時薪（元）','number'],['monthly_salary','月薪（元）','number'],['meal_allowance','伙食津貼（元）','number'],
     ['ot1_rate','加班 1 倍率','number'],['ot2_rate','加班 2 倍率','number'],['labor_ins_base','勞保投保金額（元）','number'],['health_ins_base','健保投保金額（元）','number'],['labor_employee','勞保員工負擔（元）','number'],['health_employee','健保員工負擔（元）','number']
   ];
-  let credential = '', operator = '', cases = [], selected = null, busy = false, approvalRevision = null, pendingBootstrap = null, mustReload = false, caseView = 'pending', casePage = 0;
+  let credential = '', operator = '', cases = [], selected = null, busy = false, approvalRevision = null, pendingBootstrap = null, mustReload = false, caseView = 'pending', casePage = 0, requestSequence = 0;
   const el = (tag,text,className) => { const n = document.createElement(tag); if(text !== undefined)n.textContent=text; if(className)n.className=className; return n; };
   function message(text,error=false){$('message').replaceChildren(text?el('div',text,'notice'+(error?' error':'')):el('span'));}
   function setBusy(value){busy=value;document.querySelectorAll('button').forEach(b=>{if(b.closest&&b.closest('#ma-auth,#ma-owner-tools'))return;b.disabled=value||b.dataset.locked==='true';});document.querySelectorAll('input,select,textarea').forEach(f=>{if(f.closest&&f.closest('#ma-auth,#ma-owner-tools'))return;if(value){f.dataset.wasDisabled=String(f.disabled);f.disabled=true;}else if(f.dataset.wasDisabled!==undefined){f.disabled=f.dataset.wasDisabled==='true';delete f.dataset.wasDisabled;}});}
@@ -20,7 +20,8 @@
     const controller = new AbortController(), timer = setTimeout(()=>controller.abort(),55000);
     try{
       if(named)return await auth.request(action,extra);
-      const result = await fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},credentials:'omit',redirect:'follow',referrerPolicy:'no-referrer',body:JSON.stringify({...extra,action,admin_token:credential,operator}),signal:controller.signal});
+      const url=new URL(ENDPOINT);url.searchParams.set('rzd_req',Date.now().toString(36)+'-'+(++requestSequence).toString(36)+'-'+Math.random().toString(36).slice(2));
+      const result = await fetch(url.href,{cache:'no-store',method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},credentials:'omit',redirect:'follow',referrerPolicy:'no-referrer',body:JSON.stringify({...extra,action,admin_token:credential,operator}),signal:controller.signal});
       if(!result.ok)throw new Error('服務暫時無法連線。請保留同一筆申請，重新讀取結果。');
       const data = await result.json();
       if(!data.success){const err=new Error(data.error||data.message||'操作未完成，請重新讀取同一筆申請。');err.code=data.code;throw err;}
